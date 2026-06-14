@@ -1,0 +1,28 @@
+{
+  "name": "骑行伙伴共享骑行地图",
+  "short_name": "骑行伙伴",
+  "description": "多人骑行共享实时位置，按骑行路线计算队友距离，并智能判断领骑、跟骑与收队。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#eef4ef",
+  "theme_color": "#23a36d",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "创建骑行房间",
+      "short_name": "新建房间",
+      "description": "快速进入共享骑行地图并创建房间。",
+      "url": "./"
+    }
+  ]
+}

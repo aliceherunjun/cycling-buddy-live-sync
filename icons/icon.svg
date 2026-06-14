@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="骑行伙伴">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="40" x2="430" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7be2ad" />
+      <stop offset="1" stop-color="#1a8d63" />
+    </linearGradient>
+    <linearGradient id="route" x1="120" y1="348" x2="402" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="1" stop-color="#d9fff0" stop-opacity="0.9" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#bg)" />
+  <path d="M112 350 C 175 278, 216 283, 252 231 S 338 143, 404 150" fill="none" stroke="url(#route)" stroke-width="34" stroke-linecap="round" />
+  <path d="M112 350 C 175 278, 216 283, 252 231 S 338 143, 404 150" fill="none" stroke="#0e6f4f" stroke-opacity="0.18" stroke-width="54" stroke-linecap="round" />
+  <circle cx="112" cy="350" r="38" fill="#ffffff" />
+  <circle cx="112" cy="350" r="20" fill="#1a9f6c" />
+  <circle cx="404" cy="150" r="38" fill="#ffffff" />
+  <circle cx="404" cy="150" r="20" fill="#ef7d4b" />
+  <circle cx="252" cy="231" r="44" fill="#143126" fill-opacity="0.2" />
+  <circle cx="252" cy="231" r="28" fill="#ffffff" />
+  <circle cx="252" cy="231" r="13" fill="#23a36d" />
+  <path d="M171 354 C 202 315, 232 297, 265 281" fill="none" stroke="#143126" stroke-opacity="0.42" stroke-width="18" stroke-linecap="round" stroke-dasharray="1 32" />
+</svg>

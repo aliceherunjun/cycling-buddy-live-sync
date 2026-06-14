@@ -1,0 +1,5 @@
+window.CYCLING_BUDDY_CONFIG = {
+  AMAP_KEY: "",
+  AMAP_SECURITY_JS_CODE: "",
+  PUBLIC_BASE_URL: "",
+};

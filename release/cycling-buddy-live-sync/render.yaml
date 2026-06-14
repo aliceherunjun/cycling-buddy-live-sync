@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cycling-buddy-live-sync
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: AMAP_KEY
+        sync: false
+      - key: AMAP_SECURITY_JS_CODE
+        sync: false

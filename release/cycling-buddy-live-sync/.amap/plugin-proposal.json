@@ -1,0 +1,40 @@
+{
+  "name": "cycling-buddy-live-location",
+  "displayName": "骑行伙伴共享实时位置",
+  "version": "0.1.0",
+  "targetHost": "高德地图 App",
+  "integrationType": "official-partner-plugin-proposal",
+  "status": "proposal",
+  "scenes": [
+    "骑行导航中多人同行",
+    "领骑与跟骑实时距离感知",
+    "掉队风险提醒",
+    "安全汇合点建议"
+  ],
+  "requiredHostCapabilities": [
+    "获取当前骑行导航路线 polyline",
+    "获取用户实时 GPS 坐标与速度",
+    "在骑行导航地图上绘制队友位置标记",
+    "创建/加入共享位置房间",
+    "调用高德账号或手机号完成伙伴授权",
+    "导航页内安全提醒 UI 插槽",
+    "微信/系统分享入口"
+  ],
+  "backendCapabilities": [
+    "房间创建与加入",
+    "SSE/WebSocket 实时同步",
+    "队友位置 TTL",
+    "路线投影距离计算",
+    "智能领骑/跟骑/收队判断"
+  ],
+  "privacyPrinciples": [
+    "仅在用户主动开启共享后上传位置",
+    "房间结束或 TTL 到期后停止展示成员",
+    "不保存历史轨迹作为长期资产",
+    "共享链接仅授予同一房间的实时查看权限"
+  ],
+  "fallback": {
+    "type": "standalone-web-pwa",
+    "description": "在高德地图 App 插件能力开放前，使用独立 PWA 验证多人骑行共享位置体验。"
+  }
+}

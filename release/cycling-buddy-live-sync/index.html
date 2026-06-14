@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>骑行伙伴共享骑行地图</title>
+    <meta
+      name="description"
+      content="多人骑行共享实时位置，按骑行路线计算队友距离，并智能判断领骑、跟骑与收队。"
+    />
+    <meta name="theme-color" content="#23a36d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="骑行伙伴" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260614" />
+    <link rel="icon" href="./icons/icon.svg?v=20260614" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon.svg?v=20260614" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260614" />
+  </head>
+  <body>
+    <div class="app-shell" id="app-shell">
+      <aside class="side-panel" id="side-panel">
+        <button
+          id="collapse-panel"
+          class="panel-toggle panel-toggle-inline"
+          type="button"
+          aria-expanded="true"
+          aria-controls="side-panel"
+        >
+          收起侧栏
+        </button>
+        <nav class="side-rail" aria-label="侧栏快捷入口">
+          <button class="rail-button" type="button" data-panel-target="hero-card" aria-label="产品概览">概</button>
+          <button class="rail-button" type="button" data-panel-target="room-card" aria-label="共享房间">房</button>
+          <button class="rail-button" type="button" data-panel-target="route-card" aria-label="骑行路线">线</button>
+          <button class="rail-button" type="button" data-panel-target="team-card" aria-label="队伍状态">队</button>
+          <button class="rail-button" type="button" data-panel-target="insight-card" aria-label="安全提醒">提醒</button>
+        </nav>
+        <div class="panel-section hero-card">
+          <p class="eyebrow">多人安全骑行</p>
+          <h1>共享实时位置，不再频繁回头找人</h1>
+          <p class="hero-copy">
+            以骑行导航为主场景，把每位伙伴的实时位置、掉队风险、与我的距离和预计汇合点持续显示在同一个地图界面里。
+          </p>
+          <div class="hero-tags">
+            <span>沿路线共享</span>
+            <span>距离提醒</span>
+            <span>安全感知</span>
+          </div>
+        </div>
+
+        <div class="panel-section room-card">
+          <div class="section-heading">
+            <div>
+              <p class="mini-label">共享房间</p>
+              <h2>创建或加入同一骑行队伍</h2>
+            </div>
+            <span class="pill room" id="room-code-pill">房间未连接</span>
+          </div>
+
+          <div class="room-grid">
+            <label class="field">
+              <span>我的昵称</span>
+              <input id="display-name" maxlength="10" type="text" placeholder="输入你的骑行昵称" />
+            </label>
+            <label class="field">
+              <span>队伍角色</span>
+              <select id="rider-role">
+                <option value="领骑">领骑</option>
+                <option value="跟骑">跟骑</option>
+                <option value="收队">收队</option>
+                <option value="自由骑">自由骑</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="color-row">
+            <span>位置颜色</span>
+            <div class="color-swatches" id="color-swatches"></div>
+          </div>
+
+          <div class="room-grid compact">
+            <label class="field field-room-code">
+              <span>邀请码</span>
+              <input id="room-code-input" maxlength="8" type="text" placeholder="输入房间码加入" />
+            </label>
+            <label class="demo-toggle">
+              <input id="demo-toggle" type="checkbox" checked aria-label="保留演示队友" />
+              <span>保留演示队友</span>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="create-room" class="primary-button" type="button">新建房间</button>
+            <button id="join-room" class="ghost-button" type="button">加入房间</button>
+            <button id="leave-room" class="ghost-button danger-button" type="button">退出共享</button>
+            <button id="copy-room" class="ghost-button" type="button">复制邀请</button>
+            <button id="share-room" class="ghost-button wechat-button" type="button">微信分享</button>
+            <a
+              id="download-package"
+              class="ghost-button download-button"
+              href="./release/cycling-buddy-live-sync.zip"
+              download
+            >
+              下载应用包
+            </a>
+            <button id="open-tab" class="ghost-button" type="button">打开新标签</button>
+          </div>
+
+          <div class="location-box">
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="mini-label">真实定位</p>
+                <h3>共享 GPS 位置</h3>
+              </div>
+              <label class="switch">
+                <input id="live-location-toggle" type="checkbox" aria-label="启用真实定位" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <p class="location-copy" id="location-status">
+              当前使用模拟骑行轨迹。开启后会申请浏览器定位权限，并把真实坐标同步给房间成员。
+            </p>
+          </div>
+
+          <p class="room-helper" id="room-helper">
+            你可以先新建房间，再在另一个浏览器标签页输入同一邀请码，模拟多人同时骑行。
+          </p>
+        </div>
+
+        <div class="panel-section route-card">
+          <div class="route-topline">
+            <div>
+              <p class="mini-label">当前骑行路线</p>
+              <h2 id="route-title">A 点到 B 点 · 滨江绿道晨骑</h2>
+            </div>
+            <span class="pill live" id="room-sync-pill">实时同步中</span>
+          </div>
+          <div class="route-stops">
+            <div class="stop">
+              <span class="stop-dot start"></span>
+              <div>
+                <p>起点</p>
+                <strong id="route-origin-name">陆家嘴滨江骑行驿站</strong>
+              </div>
+            </div>
+            <div class="stop-separator"></div>
+            <div class="stop">
+              <span class="stop-dot end"></span>
+              <div>
+                <p>终点</p>
+                <strong id="route-destination-name">前滩休闲公园南门</strong>
+              </div>
+            </div>
+          </div>
+          <div class="route-metrics">
+            <div>
+              <span>总里程</span>
+              <strong id="route-distance">18.6 km</strong>
+            </div>
+            <div>
+              <span>预计骑行</span>
+              <strong id="route-eta">52 min</strong>
+            </div>
+            <div>
+              <span>队伍人数</span>
+              <strong id="team-count">4 人</strong>
+            </div>
+          </div>
+          <button id="open-amap-navigation" class="ghost-button amap-button" type="button">
+            打开高德骑行导航
+          </button>
+        </div>
+
+        <div class="panel-section team-card">
+          <div class="section-heading">
+            <div>
+              <p class="mini-label">队伍状态</p>
+              <h2>伙伴位置概览</h2>
+            </div>
+            <button id="toggle-motion" class="ghost-button" type="button">暂停模拟</button>
+          </div>
+          <div class="member-list" id="member-list"></div>
+        </div>
+
+        <div class="panel-section insight-card">
+          <div class="section-heading">
+            <div>
+              <p class="mini-label">安全提醒</p>
+              <h2>智能提示</h2>
+            </div>
+          </div>
+          <div class="insight-list" id="insight-list"></div>
+        </div>
+      </aside>
+
+      <main class="map-panel">
+        <button
+          id="expand-panel"
+          class="panel-toggle panel-toggle-floating"
+          type="button"
+          aria-expanded="false"
+          aria-controls="side-panel"
+        >
+          展开侧栏
+        </button>
+        <div class="top-bar">
+          <div class="map-mode">
+            <span class="mode-badge active">骑行导航</span>
+            <span class="mode-badge" id="room-mode-badge">共享位置</span>
+          </div>
+          <div class="map-summary">
+            <div>
+              <span>我的速度</span>
+              <strong id="self-speed">21.4 km/h</strong>
+            </div>
+            <div>
+              <span>最近伙伴</span>
+              <strong id="nearest-rider">阿泽 · 120 m</strong>
+            </div>
+            <div>
+              <span>掉队风险</span>
+              <strong id="risk-level">低</strong>
+            </div>
+          </div>
+        </div>
+
+        <section class="map-stage">
+          <div class="amap-canvas" id="amap-canvas" aria-hidden="true"></div>
+          <div class="map-grid"></div>
+          <div class="map-overlay map-overlay-a"></div>
+          <div class="map-overlay map-overlay-b"></div>
+
+          <div class="landmark landmark-a">
+            <span>补给点</span>
+            <strong>耀华路桥下</strong>
+          </div>
+          <div class="landmark landmark-b">
+            <span>汇合点建议</span>
+            <strong>世博大道口</strong>
+          </div>
+
+          <svg class="route-svg" viewBox="0 0 1000 760" preserveAspectRatio="none" aria-hidden="true">
+            <path
+              d="M130 610 C 210 520, 250 470, 320 440 S 480 350, 560 300 S 700 210, 810 160"
+              class="route-shadow"
+            />
+            <path
+              d="M130 610 C 210 520, 250 470, 320 440 S 480 350, 560 300 S 700 210, 810 160"
+              class="route-main"
+            />
+            <path
+              d="M130 610 C 210 520, 250 470, 320 440 S 480 350, 560 300 S 700 210, 810 160"
+              class="route-glow"
+              pathLength="100"
+            />
+          </svg>
+
+          <div class="endpoint endpoint-start" style="left: 13%; top: 79%;">
+            <span>A</span>
+            <label>起点</label>
+          </div>
+          <div class="endpoint endpoint-end" style="left: 81%; top: 16%;">
+            <span>B</span>
+            <label>终点</label>
+          </div>
+
+          <div class="status-ribbon">
+            <span class="status-live-dot"></span>
+            <span id="status-ribbon-copy">队伍正在同一路线骑行中，位置每 2 秒刷新一次</span>
+          </div>
+
+          <div class="rider-layer" id="rider-layer"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="member-template">
+      <article class="member-card">
+        <div class="member-identity">
+          <div class="avatar"></div>
+          <div>
+            <strong class="member-name"></strong>
+            <p class="member-role"></p>
+          </div>
+        </div>
+        <div class="member-stats">
+          <span class="member-distance"></span>
+          <span class="member-speed"></span>
+        </div>
+      </article>
+    </template>
+
+    <template id="insight-template">
+      <article class="insight-item">
+        <div class="insight-icon"></div>
+        <div>
+          <strong class="insight-title"></strong>
+          <p class="insight-copy"></p>
+        </div>
+      </article>
+    </template>
+
+    <script src="./config.js?v=20260614"></script>
+    <script src="./app.js?v=20260614"></script>
+  </body>
+</html>
