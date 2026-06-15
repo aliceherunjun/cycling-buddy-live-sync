@@ -292,8 +292,17 @@ function projectLocationToRoute(location) {
 
 function hasRouteLocation(participant) {
   return (
+    activeRoute.source === "amap-riding" &&
     (participant?.locationSource === "gps" || participant?.locationSource === "test-gps") &&
     isFiniteNumber(participant.routeDistanceMeters)
+  );
+}
+
+function hasGpsLocation(participant) {
+  return (
+    (participant?.locationSource === "gps" || participant?.locationSource === "test-gps") &&
+    isFiniteNumber(participant.latitude) &&
+    isFiniteNumber(participant.longitude)
   );
 }
 
@@ -322,6 +331,9 @@ function signedRouteGapMeters(baseParticipant, targetParticipant) {
 function distanceBetweenParticipants(baseParticipant, targetParticipant) {
   if (hasRouteLocation(baseParticipant) && hasRouteLocation(targetParticipant)) {
     return Math.abs(signedRouteGapMeters(baseParticipant, targetParticipant));
+  }
+  if (hasGpsLocation(baseParticipant) && hasGpsLocation(targetParticipant)) {
+    return haversineDistanceMeters(baseParticipant, targetParticipant) || 0;
   }
   return estimateDistanceGap(
     getParticipantRouteProgress(baseParticipant),
@@ -403,7 +415,9 @@ function handleGeoPosition(position) {
   }
   saveProfile();
   updateLocationStatus(
-    `已启用真实定位，当前精度约 ${Math.round(accuracy)} 米。队友距离会按骑行路线里程差计算，而不是直线距离。`,
+    activeRoute.source === "amap-riding"
+      ? `已启用真实定位，当前精度约 ${Math.round(accuracy)} 米。队友距离会按真实骑行路线里程差计算。`
+      : `已启用真实定位，当前精度约 ${Math.round(accuracy)} 米。未配置真实路线时，队友距离先按 GPS 直线距离计算。`,
   );
   void pushSelfUpdate(true);
 }
@@ -448,6 +462,7 @@ function setRealLocationEnabled(nextValue) {
   }
 
   if (useRealLocation) {
+    demoToggle.checked = false;
     if (profile.locationSource === "test-gps" && hasProfileLocation()) {
       profile.locationSource = null;
       profile.latitude = null;
@@ -622,9 +637,15 @@ function formatDistanceKm(distanceKm) {
 }
 
 function updateRouteSummary() {
-  routeTitle.textContent = `A 点到 B 点 · ${activeRoute.title}`;
-  routeOriginName.textContent = activeRoute.origin.name;
-  routeDestinationName.textContent = activeRoute.destination.name;
+  if (activeRoute.source === "fallback") {
+    routeTitle.textContent = "实时位置共享 · 等待真实路线";
+    routeOriginName.textContent = "我的实时位置";
+    routeDestinationName.textContent = "队友实时位置";
+  } else {
+    routeTitle.textContent = `A 点到 B 点 · ${activeRoute.title}`;
+    routeOriginName.textContent = activeRoute.origin.name;
+    routeDestinationName.textContent = activeRoute.destination.name;
+  }
   routeDistance.textContent = formatDistanceKm(activeRoute.distanceKm);
   routeEta.textContent = `${Math.round(activeRoute.etaMinutes)} min`;
 }
@@ -1318,13 +1339,15 @@ function renderRoom(room) {
     memberNode.name.textContent = participant.name;
 
     if (participant.id === selfParticipant.id) {
-      memberNode.distance.textContent = hasRouteLocation(participant) ? "路线里程基准" : "当前位置基准";
+      memberNode.distance.textContent = hasRouteLocation(participant) ? "真实路线基准" : "真实位置基准";
       memberNode.role.textContent = `${getDisplayRole(participant)} · 共享中`;
       memberNode.speed.textContent = `${participant.speed.toFixed(1)} km/h`;
       label.classList.remove("warn");
       labelCopy.textContent = hasRouteLocation(participant)
-        ? "按路线计算距离"
-        : `速度 ${participant.speed.toFixed(1)} km/h`;
+        ? "按真实路线计算"
+        : hasGpsLocation(participant)
+          ? "按 GPS 计算距离"
+          : `速度 ${participant.speed.toFixed(1)} km/h`;
       return;
     }
 
@@ -1362,7 +1385,9 @@ function renderRoom(room) {
   roomSyncPill.textContent = `${participants.length} 人同步中`;
   roomModeBadge.textContent = useRealLocation ? "真实定位" : `房间 ${room.id}`;
   statusRibbonCopy.textContent = useRealLocation
-    ? `房间 ${room.id} 正在共享真实定位，距离按骑行路线里程差计算`
+    ? activeRoute.source === "amap-riding"
+      ? `房间 ${room.id} 正在共享真实定位，距离按真实骑行路线里程差计算`
+      : `房间 ${room.id} 正在共享真实定位，当前按 GPS 直线距离计算`
     : `房间 ${room.id} 正在共享位置，${participants.length} 位骑友沿同一路线同步`;
   roomHelper.textContent = `当前房间 ${room.id} 已连接。打开新标签后输入同一邀请码，就能看到新的骑友实时出现在地图上。`;
 
