@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 loadDotEnv(path.join(__dirname, ".env"));
 
 const port = Number(process.env.PORT || 4173);
+const host = process.env.HOST || "0.0.0.0";
 const publicBaseUrl = process.env.PUBLIC_BASE_URL || "";
 const amapKey = process.env.AMAP_KEY || "";
 const amapSecurityJsCode = process.env.AMAP_SECURITY_JS_CODE || "";
@@ -439,6 +440,6 @@ const server = http.createServer(async (req, res) => {
   await serveStatic(req, res, pathname);
 });
 
-server.listen(port, () => {
-  console.log(`Cycling buddy server listening on http://127.0.0.1:${port}`);
+server.listen(port, host, () => {
+  console.log(`Cycling buddy server listening on http://${host}:${port}`);
 });
