@@ -1,12 +1,12 @@
-const CACHE_NAME = "cycling-buddy-v2";
+const CACHE_NAME = "cycling-buddy-v3-20260618";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=20260614",
-  "./app.js?v=20260614",
-  "./config.js?v=20260614",
-  "./manifest.webmanifest?v=20260614",
-  "./icons/icon.svg?v=20260614",
+  "./styles.css?v=20260618",
+  "./app.js?v=20260618",
+  "./config.js?v=20260618",
+  "./manifest.webmanifest?v=20260618",
+  "./icons/icon.svg?v=20260618",
 ];
 
 self.addEventListener("install", (event) => {
@@ -31,6 +31,19 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
 
   if (requestUrl.pathname.startsWith("/api/")) {
+    return;
+  }
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put("./", responseToCache));
+          return response;
+        })
+        .catch(() => caches.match("./index.html").then((cached) => cached || caches.match("./"))),
+    );
     return;
   }
 

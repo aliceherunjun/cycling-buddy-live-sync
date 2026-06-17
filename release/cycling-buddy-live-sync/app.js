@@ -94,9 +94,7 @@ const roomCodeInput = document.getElementById("room-code-input");
 const createRoomButton = document.getElementById("create-room");
 const joinRoomButton = document.getElementById("join-room");
 const leaveRoomButton = document.getElementById("leave-room");
-const copyRoomButton = document.getElementById("copy-room");
 const shareRoomButton = document.getElementById("share-room");
-const openTabButton = document.getElementById("open-tab");
 const openAmapNavigationButton = document.getElementById("open-amap-navigation");
 const colorSwatches = document.getElementById("color-swatches");
 const demoToggle = document.getElementById("demo-toggle");
@@ -135,6 +133,7 @@ let geoWatchId = null;
 let amapMap = null;
 let amapRouteLine = null;
 let activeRoute = createActiveRoute(fallbackRouteDefinition);
+let isBootReady = false;
 
 function createActiveRoute(route) {
   return {
@@ -292,8 +291,17 @@ function projectLocationToRoute(location) {
 
 function hasRouteLocation(participant) {
   return (
+    activeRoute.source === "amap-riding" &&
     (participant?.locationSource === "gps" || participant?.locationSource === "test-gps") &&
     isFiniteNumber(participant.routeDistanceMeters)
+  );
+}
+
+function hasGpsLocation(participant) {
+  return (
+    (participant?.locationSource === "gps" || participant?.locationSource === "test-gps") &&
+    isFiniteNumber(participant.latitude) &&
+    isFiniteNumber(participant.longitude)
   );
 }
 
@@ -322,6 +330,9 @@ function signedRouteGapMeters(baseParticipant, targetParticipant) {
 function distanceBetweenParticipants(baseParticipant, targetParticipant) {
   if (hasRouteLocation(baseParticipant) && hasRouteLocation(targetParticipant)) {
     return Math.abs(signedRouteGapMeters(baseParticipant, targetParticipant));
+  }
+  if (hasGpsLocation(baseParticipant) && hasGpsLocation(targetParticipant)) {
+    return haversineDistanceMeters(baseParticipant, targetParticipant) || 0;
   }
   return estimateDistanceGap(
     getParticipantRouteProgress(baseParticipant),
@@ -376,6 +387,26 @@ function updateLocationStatus(copy) {
   locationStatus.textContent = copy;
 }
 
+function setRoomControlsDisabled(disabled) {
+  [
+    createRoomButton,
+    joinRoomButton,
+    leaveRoomButton,
+    shareRoomButton,
+    openAmapNavigationButton,
+    demoToggle,
+    liveLocationToggle,
+  ].forEach((control) => {
+    control.disabled = disabled;
+  });
+}
+
+function ensureBootReady() {
+  if (isBootReady) return true;
+  roomHelper.textContent = "正在连接服务端并恢复房间状态，请稍等几秒后再操作。";
+  return false;
+}
+
 function stopRealLocationWatch() {
   if (geoWatchId !== null && "geolocation" in navigator) {
     navigator.geolocation.clearWatch(geoWatchId);
@@ -403,7 +434,9 @@ function handleGeoPosition(position) {
   }
   saveProfile();
   updateLocationStatus(
-    `已启用真实定位，当前精度约 ${Math.round(accuracy)} 米。队友距离会按骑行路线里程差计算，而不是直线距离。`,
+    activeRoute.source === "amap-riding"
+      ? `已启用真实定位，当前精度约 ${Math.round(accuracy)} 米。队友距离会按真实骑行路线里程差计算。`
+      : `已启用真实定位，当前精度约 ${Math.round(accuracy)} 米。未配置真实路线时，队友距离先按 GPS 直线距离计算。`,
   );
   void pushSelfUpdate(true);
 }
@@ -448,6 +481,7 @@ function setRealLocationEnabled(nextValue) {
   }
 
   if (useRealLocation) {
+    demoToggle.checked = false;
     if (profile.locationSource === "test-gps" && hasProfileLocation()) {
       profile.locationSource = null;
       profile.latitude = null;
@@ -622,9 +656,15 @@ function formatDistanceKm(distanceKm) {
 }
 
 function updateRouteSummary() {
-  routeTitle.textContent = `A 点到 B 点 · ${activeRoute.title}`;
-  routeOriginName.textContent = activeRoute.origin.name;
-  routeDestinationName.textContent = activeRoute.destination.name;
+  if (activeRoute.source === "fallback") {
+    routeTitle.textContent = "实时位置共享 · 等待真实路线";
+    routeOriginName.textContent = "我的实时位置";
+    routeDestinationName.textContent = "队友实时位置";
+  } else {
+    routeTitle.textContent = `A 点到 B 点 · ${activeRoute.title}`;
+    routeOriginName.textContent = activeRoute.origin.name;
+    routeDestinationName.textContent = activeRoute.destination.name;
+  }
   routeDistance.textContent = formatDistanceKm(activeRoute.distanceKm);
   routeEta.textContent = `${Math.round(activeRoute.etaMinutes)} min`;
 }
@@ -1237,7 +1277,7 @@ function updateInsights(participants, selfParticipant) {
     createInsightItem({
       icon: "邀",
       title: "邀请伙伴加入房间",
-      copy: "点击微信分享或复制邀请，把同一路线房间发给同行伙伴，对方打开后即可共享轨迹。",
+      copy: "点击微信分享，把同一路线房间发给同行伙伴，对方打开后即可共享轨迹。",
       color: "linear-gradient(180deg, #4c9eea, #3475d7)",
     });
     return;
@@ -1318,13 +1358,15 @@ function renderRoom(room) {
     memberNode.name.textContent = participant.name;
 
     if (participant.id === selfParticipant.id) {
-      memberNode.distance.textContent = hasRouteLocation(participant) ? "路线里程基准" : "当前位置基准";
+      memberNode.distance.textContent = hasRouteLocation(participant) ? "真实路线基准" : "真实位置基准";
       memberNode.role.textContent = `${getDisplayRole(participant)} · 共享中`;
       memberNode.speed.textContent = `${participant.speed.toFixed(1)} km/h`;
       label.classList.remove("warn");
       labelCopy.textContent = hasRouteLocation(participant)
-        ? "按路线计算距离"
-        : `速度 ${participant.speed.toFixed(1)} km/h`;
+        ? "按真实路线计算"
+        : hasGpsLocation(participant)
+          ? "按 GPS 计算距离"
+          : `速度 ${participant.speed.toFixed(1)} km/h`;
       return;
     }
 
@@ -1362,9 +1404,11 @@ function renderRoom(room) {
   roomSyncPill.textContent = `${participants.length} 人同步中`;
   roomModeBadge.textContent = useRealLocation ? "真实定位" : `房间 ${room.id}`;
   statusRibbonCopy.textContent = useRealLocation
-    ? `房间 ${room.id} 正在共享真实定位，距离按骑行路线里程差计算`
+    ? activeRoute.source === "amap-riding"
+      ? `房间 ${room.id} 正在共享真实定位，距离按真实骑行路线里程差计算`
+      : `房间 ${room.id} 正在共享真实定位，当前按 GPS 直线距离计算`
     : `房间 ${room.id} 正在共享位置，${participants.length} 位骑友沿同一路线同步`;
-  roomHelper.textContent = `当前房间 ${room.id} 已连接。打开新标签后输入同一邀请码，就能看到新的骑友实时出现在地图上。`;
+  roomHelper.textContent = `当前房间 ${room.id} 已连接。点击微信分享，把邀请码发给同行骑友即可加入。`;
 
   updateInsights(participants, selfParticipant);
 }
@@ -1592,19 +1636,6 @@ async function joinRoom(roomId) {
   return joinLocalRoom(normalized);
 }
 
-function openCurrentRoomInNewTab() {
-  const roomId = currentRoomId || currentRoom?.id;
-  if (!roomId) return;
-  const nextMember = `guest${Math.random().toString(36).slice(2, 5)}`;
-  const params = new URLSearchParams(window.location.search);
-  params.set("member", nextMember);
-  params.set("name", "新队友");
-  params.set("role", "跟骑");
-  params.set("demo", "0");
-  const target = `${window.location.pathname}?${params.toString()}#${roomId}`;
-  window.open(target, "_blank", "noopener,noreferrer");
-}
-
 function buildGuestInviteUrl(roomId) {
   const params = new URLSearchParams(window.location.search);
   params.set("member", `guest-${roomId.toLowerCase()}`);
@@ -1625,19 +1656,6 @@ function buildInviteText(roomId) {
 
 async function copyTextToClipboard(text) {
   await navigator.clipboard.writeText(text);
-}
-
-async function copyRoomInvite() {
-  const roomId = currentRoomId || currentRoom?.id;
-  if (!roomId) return;
-  const inviteText = buildInviteText(roomId);
-
-  try {
-    await copyTextToClipboard(inviteText);
-    roomHelper.textContent = `微信邀请文案已复制。发给同行伙伴后，对方打开链接即可进入同一房间共享轨迹。`;
-  } catch {
-    roomHelper.textContent = `当前浏览器不支持直接复制，请手动记录邀请码 ${roomId}。`;
-  }
 }
 
 async function shareRoomInvite() {
@@ -1665,7 +1683,7 @@ async function shareRoomInvite() {
       return;
     }
 
-    roomHelper.textContent = "分享面板不可用，建议使用“复制邀请”后粘贴到微信。";
+    roomHelper.textContent = `分享面板不可用，请手动把邀请码 ${roomId} 发给同行伙伴。`;
   }
 }
 
@@ -1703,14 +1721,17 @@ function bindEvents() {
   });
 
   demoToggle.addEventListener("change", () => {
+    if (!ensureBootReady()) return;
     void pushSelfUpdate(true);
   });
 
   liveLocationToggle.addEventListener("change", () => {
+    if (!ensureBootReady()) return;
     setRealLocationEnabled(liveLocationToggle.checked);
   });
 
   createRoomButton.addEventListener("click", () => {
+    if (!ensureBootReady()) return;
     void createRoom().catch(() => {
       roomHelper.textContent = "创建房间失败，已回退到本地演示同步模式。";
       syncMode = "local";
@@ -1718,6 +1739,7 @@ function bindEvents() {
   });
 
   joinRoomButton.addEventListener("click", () => {
+    if (!ensureBootReady()) return;
     if (roomCodeInput.value.trim()) {
       void joinRoom(roomCodeInput.value).catch(() => {
         roomHelper.textContent = `加入房间 ${roomCodeInput.value.trim().toUpperCase()} 失败，请确认服务端已启动。`;
@@ -1725,23 +1747,18 @@ function bindEvents() {
     }
   });
 
-  copyRoomButton.addEventListener("click", () => {
-    copyRoomInvite();
-  });
-
   shareRoomButton.addEventListener("click", () => {
+    if (!ensureBootReady()) return;
     shareRoomInvite();
   });
 
   leaveRoomButton.addEventListener("click", () => {
+    if (!ensureBootReady()) return;
     void leaveRoom();
   });
 
-  openTabButton.addEventListener("click", () => {
-    openCurrentRoomInNewTab();
-  });
-
   openAmapNavigationButton.addEventListener("click", () => {
+    if (!ensureBootReady()) return;
     openAmapNavigation();
   });
 
@@ -1787,82 +1804,89 @@ function bootstrap() {
   syncRealLocationToggle();
   syncProfileControls();
   updateRouteSummary();
+  setRoomControlsDisabled(true);
   bindEvents();
   void initAmap();
   updateLocationStatus("当前使用模拟骑行轨迹。开启后会申请浏览器定位权限，并把真实坐标同步给房间成员。");
+  roomHelper.textContent = "正在连接服务端并恢复房间状态，请稍等几秒后再操作。";
 
   const boot = async () => {
     const hasTestLocation = applyLaunchLocationOverride();
     const roomId = getRoomIdFromLocation();
 
     try {
-      await fetchRemoteRoom(roomId || "PING").catch(() => null);
-      syncMode = "remote";
-      if (launchOverrides.demo === "0") {
-        demoToggle.checked = false;
-      }
-      if (roomId) {
-        await joinRemoteRoom(roomId);
-      } else {
-        renderDisconnectedState("还未进入共享房间。点击“新建房间”开始共享，或输入邀请码加入同行队伍。");
-      }
-      if (hasTestLocation) {
-        useRealLocation = true;
-        syncRealLocationToggle();
-        updateLocationStatus(
-          `已使用链接中的测试经纬度进入真实定位演示，距离会按骑行路线里程差计算。`,
-        );
-      } else if (useRealLocation) {
-        startRealLocationWatch();
-      }
-      if (roomId) {
-        roomHelper.textContent = `当前已连接服务端同步。房间状态会在不同浏览器实例之间实时共享。`;
-      }
-    } catch {
-      syncMode = "local";
-      if (!storageAvailable) {
-        roomHelper.textContent = "服务端未连接，且当前页面环境不支持本地房间同步。建议通过 npm start 启动服务端后访问。";
-      } else {
-        roomHelper.textContent = "服务端未连接，当前回退到本地演示同步模式。启动服务端后刷新页面即可切到真实同步。";
-      }
-      if (roomId) {
-        const room = readRoom(roomId);
-        if (room) {
-          room.demoEnabled = room.demoEnabled ?? true;
-          adoptHostIfNeeded(room);
-          ensureSelfParticipant(room);
-          ensureDemoParticipants(room);
-          writeRoom(room);
-          currentRoomId = room.id;
-          currentRoom = room;
-          roomCodeInput.value = room.id;
-          demoToggle.checked = room.demoEnabled ?? true;
-          setRoomLocation(room.id);
-          renderRoom(room);
-        } else {
-          clearRoomLocation();
-          renderDisconnectedState(`房间 ${roomId} 暂不可用。你可以新建房间，或确认邀请码后重新加入。`);
+      try {
+        await fetchRemoteRoom(roomId || "PING").catch(() => null);
+        syncMode = "remote";
+        if (launchOverrides.demo === "0") {
+          demoToggle.checked = false;
         }
-      } else {
-        renderDisconnectedState("当前处于本地演示模式。点击“新建房间”开始共享，或输入邀请码加入已有房间。");
+        if (roomId) {
+          await joinRemoteRoom(roomId);
+        } else {
+          renderDisconnectedState("还未进入共享房间。点击“新建房间”开始共享，或输入邀请码加入同行队伍。");
+        }
+        if (hasTestLocation) {
+          useRealLocation = true;
+          syncRealLocationToggle();
+          updateLocationStatus(
+            `已使用链接中的测试经纬度进入真实定位演示，距离会按骑行路线里程差计算。`,
+          );
+        } else if (useRealLocation) {
+          startRealLocationWatch();
+        }
+        if (roomId) {
+          roomHelper.textContent = `当前已连接服务端同步。房间状态会在不同浏览器实例之间实时共享。`;
+        }
+      } catch {
+        syncMode = "local";
+        if (!storageAvailable) {
+          roomHelper.textContent = "服务端未连接，且当前页面环境不支持本地房间同步。建议通过 npm start 启动服务端后访问。";
+        } else {
+          roomHelper.textContent = "服务端未连接，当前回退到本地演示同步模式。启动服务端后刷新页面即可切到真实同步。";
+        }
+        if (roomId) {
+          const room = readRoom(roomId);
+          if (room) {
+            room.demoEnabled = room.demoEnabled ?? true;
+            adoptHostIfNeeded(room);
+            ensureSelfParticipant(room);
+            ensureDemoParticipants(room);
+            writeRoom(room);
+            currentRoomId = room.id;
+            currentRoom = room;
+            roomCodeInput.value = room.id;
+            demoToggle.checked = room.demoEnabled ?? true;
+            setRoomLocation(room.id);
+            renderRoom(room);
+          } else {
+            clearRoomLocation();
+            renderDisconnectedState(`房间 ${roomId} 暂不可用。你可以新建房间，或确认邀请码后重新加入。`);
+          }
+        } else {
+          renderDisconnectedState("当前处于本地演示模式。点击“新建房间”开始共享，或输入邀请码加入已有房间。");
+        }
+        if (hasTestLocation) {
+          useRealLocation = true;
+          syncRealLocationToggle();
+          updateLocationStatus(
+            `已使用链接中的测试经纬度进入真实定位演示，距离会按骑行路线里程差计算。`,
+          );
+        } else if (useRealLocation) {
+          startRealLocationWatch();
+        }
       }
+
+      window.setInterval(() => {
+        void pushSelfUpdate();
+      }, HEARTBEAT_MS);
+
       if (hasTestLocation) {
-        useRealLocation = true;
-        syncRealLocationToggle();
-        updateLocationStatus(
-          `已使用链接中的测试经纬度进入真实定位演示，距离会按骑行路线里程差计算。`,
-        );
-      } else if (useRealLocation) {
-        startRealLocationWatch();
+        void pushSelfUpdate(true);
       }
-    }
-
-    window.setInterval(() => {
-      void pushSelfUpdate();
-    }, HEARTBEAT_MS);
-
-    if (hasTestLocation) {
-      void pushSelfUpdate(true);
+    } finally {
+      isBootReady = true;
+      setRoomControlsDisabled(false);
     }
   };
 
