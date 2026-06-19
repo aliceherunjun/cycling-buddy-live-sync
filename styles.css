@@ -234,14 +234,14 @@ body {
   line-height: 1.65;
 }
 
-.hero-tags {
+.hero-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 18px;
 }
 
-.hero-tags span,
+.hero-tab,
 .pill,
 .mode-badge {
   display: inline-flex;
@@ -253,9 +253,20 @@ body {
   padding: 8px 12px;
 }
 
-.hero-tags span {
+.hero-tab {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(26, 58, 44, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.hero-tab:hover,
+.hero-tab.is-active {
+  background: rgba(35, 163, 109, 0.12);
+  border-color: rgba(35, 163, 109, 0.34);
+  color: var(--green-deep);
+  box-shadow: 0 0 0 4px rgba(35, 163, 109, 0.08);
 }
 
 .route-topline,
@@ -265,6 +276,18 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.map-color-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+}
+
+.map-color-control > span {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .pill.live {
@@ -286,17 +309,16 @@ body {
 
 .room-grid.compact {
   align-items: end;
+  grid-template-columns: 1fr;
 }
 
-.field,
-.demo-toggle {
+.field {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.field span,
-.color-row > span {
+.field span {
   font-size: 13px;
   color: var(--muted);
 }
@@ -317,14 +339,6 @@ body {
 .field select:focus {
   border-color: rgba(35, 163, 109, 0.54);
   box-shadow: 0 0 0 4px rgba(35, 163, 109, 0.12);
-}
-
-.color-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin-top: 16px;
 }
 
 .color-swatches {
@@ -348,28 +362,19 @@ body {
     0 0 0 5px rgba(35, 163, 109, 0.14);
 }
 
-.demo-toggle {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(20, 49, 38, 0.08);
-  padding: 0 14px;
-  margin-top: auto;
-  color: var(--text);
-}
-
-.demo-toggle input {
-  accent-color: var(--green);
-}
-
 .action-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
+}
+
+.action-row [hidden] {
+  display: none;
+}
+
+.room-state-action {
+  grid-column: 1 / -1;
 }
 
 .primary-button {
@@ -558,11 +563,6 @@ body {
 .wechat-button {
   background: rgba(35, 163, 109, 0.12);
   color: var(--green-deep);
-}
-
-.download-button {
-  background: rgba(58, 141, 222, 0.12);
-  color: #2f6daa;
 }
 
 .amap-button {
@@ -917,7 +917,49 @@ body {
   }
 
   .app-shell {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .side-panel {
+    display: contents;
+  }
+
+  .hero-card {
+    order: 1;
+  }
+
+  .room-card {
+    order: 2;
+  }
+
+  .map-panel {
+    order: 3;
+  }
+
+  .map-panel .map-stage {
+    order: 1;
+  }
+
+  .map-panel .top-bar {
+    order: 2;
+  }
+
+  .map-panel .location-box {
+    order: 3;
+  }
+
+  .route-card {
+    order: 4;
+  }
+
+  .team-card {
+    order: 5;
+  }
+
+  .insight-card {
+    order: 6;
   }
 
   .map-stage {
@@ -942,10 +984,13 @@ body {
 
   .route-stops,
   .top-bar,
-  .section-heading,
-  .color-row {
+  .section-heading {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .top-bar {
+    gap: 18px;
   }
 
   .room-grid,

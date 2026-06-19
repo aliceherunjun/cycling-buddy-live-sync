@@ -11,16 +11,16 @@
     <meta name="theme-color" content="#23a36d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="骑行伙伴" />
-    <link rel="manifest" href="./manifest.webmanifest?v=20260618" />
-    <link rel="icon" href="./icons/icon.svg?v=20260618" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./icons/icon.svg?v=20260618" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260619" />
+    <link rel="icon" href="./icons/icon.svg?v=20260619" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon.svg?v=20260619" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260618" />
+    <link rel="stylesheet" href="./styles.css?v=20260619" />
   </head>
   <body>
     <div class="app-shell" id="app-shell">
@@ -47,10 +47,16 @@
           <p class="hero-copy">
             以骑行导航为主场景，把每位伙伴的实时位置、掉队风险、与我的距离和预计汇合点持续显示在同一个地图界面里。
           </p>
-          <div class="hero-tags">
-            <span>沿路线共享</span>
-            <span>距离提醒</span>
-            <span>安全感知</span>
+          <div class="hero-tabs" role="tablist" aria-label="产品能力模块">
+            <button class="hero-tab is-active" type="button" data-panel-target="route-card" role="tab" aria-selected="true">
+              沿路线共享
+            </button>
+            <button class="hero-tab" type="button" data-panel-target="team-card" role="tab" aria-selected="false">
+              距离提醒
+            </button>
+            <button class="hero-tab" type="button" data-panel-target="insight-card" role="tab" aria-selected="false">
+              安全感知
+            </button>
           </div>
         </div>
 
@@ -79,51 +85,22 @@
             </label>
           </div>
 
-          <div class="color-row">
-            <span>位置颜色</span>
-            <div class="color-swatches" id="color-swatches"></div>
-          </div>
-
           <div class="room-grid compact">
             <label class="field field-room-code">
               <span>邀请码</span>
               <input id="room-code-input" maxlength="8" type="text" placeholder="输入房间码加入" />
-            </label>
-            <label class="demo-toggle">
-              <input id="demo-toggle" type="checkbox" checked aria-label="保留演示队友" />
-              <span>保留演示队友</span>
             </label>
           </div>
 
           <div class="action-row">
             <button id="create-room" class="primary-button" type="button">新建房间</button>
             <button id="join-room" class="ghost-button" type="button">加入房间</button>
-            <button id="leave-room" class="ghost-button danger-button" type="button">退出共享</button>
-            <button id="share-room" class="ghost-button wechat-button" type="button">微信分享</button>
-            <a
-              id="download-package"
-              class="ghost-button download-button"
-              href="./release/cycling-buddy-live-sync.zip"
-              download
-            >
-              下载应用包
-            </a>
-          </div>
-
-          <div class="location-box">
-            <div class="section-heading compact-heading">
-              <div>
-                <p class="mini-label">真实定位</p>
-                <h3>共享 GPS 位置</h3>
-              </div>
-              <label class="switch">
-                <input id="live-location-toggle" type="checkbox" aria-label="启用真实定位" />
-                <span class="switch-slider"></span>
-              </label>
-            </div>
-            <p class="location-copy" id="location-status">
-              当前使用模拟骑行轨迹。开启后会申请浏览器定位权限，并把真实坐标同步给房间成员。
-            </p>
+            <button id="share-room" class="ghost-button wechat-button room-state-action" type="button" hidden>
+              微信共享
+            </button>
+            <button id="leave-room" class="ghost-button danger-button room-state-action" type="button" hidden>
+              退出共享
+            </button>
           </div>
 
           <p class="room-helper" id="room-helper">
@@ -212,6 +189,10 @@
             <span class="mode-badge active">骑行导航</span>
             <span class="mode-badge" id="room-mode-badge">共享位置</span>
           </div>
+          <div class="map-color-control">
+            <span>我的位置颜色</span>
+            <div class="color-swatches" id="color-swatches"></div>
+          </div>
           <div class="map-summary">
             <div>
               <span>我的速度</span>
@@ -275,6 +256,22 @@
 
           <div class="rider-layer" id="rider-layer"></div>
         </section>
+
+        <div class="location-box">
+          <div class="section-heading compact-heading">
+            <div>
+              <p class="mini-label">真实定位</p>
+              <h3>共享 GPS 位置</h3>
+            </div>
+            <label class="switch">
+              <input id="live-location-toggle" type="checkbox" aria-label="启用真实定位" />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+          <p class="location-copy" id="location-status">
+            当前使用模拟骑行轨迹。开启后会申请浏览器定位权限，并把真实坐标同步给房间成员。
+          </p>
+        </div>
       </main>
     </div>
 
@@ -304,7 +301,7 @@
       </article>
     </template>
 
-    <script src="./config.js?v=20260618"></script>
-    <script src="./app.js?v=20260618"></script>
+    <script src="./config.js?v=20260619"></script>
+    <script src="./app.js?v=20260619"></script>
   </body>
 </html>

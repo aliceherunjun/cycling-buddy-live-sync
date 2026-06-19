@@ -1,12 +1,12 @@
-const CACHE_NAME = "cycling-buddy-v3-20260618";
+const CACHE_NAME = "cycling-buddy-v3-20260619";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=20260618",
-  "./app.js?v=20260618",
-  "./config.js?v=20260618",
-  "./manifest.webmanifest?v=20260618",
-  "./icons/icon.svg?v=20260618",
+  "./styles.css?v=20260619",
+  "./app.js?v=20260619",
+  "./config.js?v=20260619",
+  "./manifest.webmanifest?v=20260619",
+  "./icons/icon.svg?v=20260619",
 ];
 
 self.addEventListener("install", (event) => {

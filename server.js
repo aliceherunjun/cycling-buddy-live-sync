@@ -130,7 +130,7 @@ function buildRoom(roomId, seed = {}) {
     id: roomId,
     title: seed.title || roomDefaults.title,
     hostId: seed.hostId || null,
-    demoEnabled: seed.demoEnabled ?? true,
+    demoEnabled: seed.demoEnabled ?? false,
     createdAt: Date.now(),
     participants: {},
   };
@@ -264,7 +264,7 @@ function handleCreateRoom(req, res, body) {
   const room = getRoom(requestedId, true, {
     title: body.title,
     hostId: body.hostId || null,
-    demoEnabled: body.demoEnabled ?? true,
+    demoEnabled: body.demoEnabled ?? false,
   });
   json(res, 200, { room: sanitizeRoom(room) });
 }
@@ -281,7 +281,7 @@ function handleGetRoom(req, res, roomId) {
 function handleUpsertParticipant(req, res, roomId, body) {
   const room = getRoom(roomId, true, {
     hostId: body.participant?.id || null,
-    demoEnabled: body.demoEnabled ?? true,
+    demoEnabled: body.demoEnabled ?? false,
   });
 
   if (!body.participant?.id) {

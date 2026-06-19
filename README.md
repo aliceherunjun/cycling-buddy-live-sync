@@ -68,7 +68,7 @@ npm run build
 - `release/cycling-buddy-live-sync/`：可直接部署的应用目录
 - `release/cycling-buddy-live-sync.zip`：可下载分享的应用包
 
-启动 `npm start` 后，页面里的“下载应用包”按钮会下载这个 zip。其他人解压后在目录里执行 `npm start`，即可本地运行同一套原型。
+其他人拿到 zip 后，解压并在目录里执行 `npm start`，即可本地运行同一套原型。
 
 ## 手机安装方式
 

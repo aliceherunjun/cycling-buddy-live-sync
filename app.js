@@ -64,6 +64,7 @@ const LAST_ROOM_KEY = "cycling-buddy-last-room";
 const PROFILE_KEY = "cycling-buddy-profile";
 const PANEL_COLLAPSE_KEY = "cycling-buddy-panel-collapsed";
 const REAL_LOCATION_KEY = "cycling-buddy-real-location-enabled";
+const DEMO_PARTICIPANTS_ENABLED = false;
 const HEARTBEAT_MS = 2000;
 const LIVE_TTL_MS = 12000;
 const API_BASE = `${window.location.origin}/api`;
@@ -97,11 +98,11 @@ const leaveRoomButton = document.getElementById("leave-room");
 const shareRoomButton = document.getElementById("share-room");
 const openAmapNavigationButton = document.getElementById("open-amap-navigation");
 const colorSwatches = document.getElementById("color-swatches");
-const demoToggle = document.getElementById("demo-toggle");
 const appShell = document.getElementById("app-shell");
 const collapsePanelButton = document.getElementById("collapse-panel");
 const expandPanelButton = document.getElementById("expand-panel");
 const railButtons = [...document.querySelectorAll(".rail-button")];
+const heroTabButtons = [...document.querySelectorAll(".hero-tab")];
 const liveLocationToggle = document.getElementById("live-location-toggle");
 const locationStatus = document.getElementById("location-status");
 
@@ -126,6 +127,7 @@ let isRunning = true;
 let frameCount = 0;
 let isPanelCollapsed = false;
 let activeRailTarget = "room-card";
+let activeHeroTarget = "route-card";
 let syncMode = "local";
 let roomStream = null;
 let useRealLocation = false;
@@ -394,17 +396,25 @@ function setRoomControlsDisabled(disabled) {
     leaveRoomButton,
     shareRoomButton,
     openAmapNavigationButton,
-    demoToggle,
     liveLocationToggle,
   ].forEach((control) => {
     control.disabled = disabled;
   });
+  renderRoomActionState();
 }
 
 function ensureBootReady() {
   if (isBootReady) return true;
   roomHelper.textContent = "正在连接服务端并恢复房间状态，请稍等几秒后再操作。";
   return false;
+}
+
+function renderRoomActionState() {
+  const isInRoom = Boolean(currentRoomId);
+  createRoomButton.hidden = isInRoom;
+  joinRoomButton.hidden = isInRoom;
+  shareRoomButton.hidden = !isInRoom;
+  leaveRoomButton.hidden = !isInRoom;
 }
 
 function stopRealLocationWatch() {
@@ -481,7 +491,6 @@ function setRealLocationEnabled(nextValue) {
   }
 
   if (useRealLocation) {
-    demoToggle.checked = false;
     if (profile.locationSource === "test-gps" && hasProfileLocation()) {
       profile.locationSource = null;
       profile.latitude = null;
@@ -521,35 +530,8 @@ function applyLaunchLocationOverride() {
   return true;
 }
 
-function loadProfile() {
-  if (launchOverrides.name || launchOverrides.role || launchOverrides.color) {
-    const preset = profilePresets[Math.floor(Math.random() * profilePresets.length)];
-    const overrideProfile = {
-      id: clientId,
-      name: launchOverrides.name || preset.name,
-      role: launchOverrides.role || preset.role,
-      color: launchOverrides.color || preset.color,
-      baseSpeed: preset.baseSpeed,
-      variance: 0.012,
-      latitude: null,
-      longitude: null,
-      accuracy: null,
-      locationSource: null,
-      routeProgress: null,
-      routeDistanceMeters: null,
-      offRouteMeters: null,
-    };
-    sessionStore.setItem(PROFILE_KEY, JSON.stringify(overrideProfile));
-    return overrideProfile;
-  }
-
-  const stored = sessionStore.getItem(PROFILE_KEY);
-  if (stored) {
-    return JSON.parse(stored);
-  }
-
-  const preset = profilePresets[Math.floor(Math.random() * profilePresets.length)];
-  const initial = {
+function createProfileFromPreset(preset) {
+  return {
     id: clientId,
     name: preset.name,
     role: preset.role,
@@ -564,12 +546,61 @@ function loadProfile() {
     routeDistanceMeters: null,
     offRouteMeters: null,
   };
-  sessionStore.setItem(PROFILE_KEY, JSON.stringify(initial));
-  return initial;
 }
 
-function saveProfile() {
-  sessionStore.setItem(PROFILE_KEY, JSON.stringify(profile));
+function createProfileFromStored(stored, fallbackPreset) {
+  const profileSource = stored || fallbackPreset;
+  return {
+    ...createProfileFromPreset(fallbackPreset),
+    name: profileSource.name || fallbackPreset.name,
+    role: profileSource.role || fallbackPreset.role,
+    color: profileSource.color || fallbackPreset.color,
+    baseSpeed: profileSource.baseSpeed || fallbackPreset.baseSpeed,
+    variance: profileSource.variance || 0.012,
+  };
+}
+
+function readStoredProfile() {
+  const stores = storageAvailable ? [window.localStorage, sessionStore] : [sessionStore];
+  for (const store of stores) {
+    try {
+      const raw = store.getItem(PROFILE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // Ignore broken profile data and fall back to a fresh preset.
+    }
+  }
+  return null;
+}
+
+function loadProfile() {
+  if (launchOverrides.name || launchOverrides.role || launchOverrides.color) {
+    const preset = profilePresets[Math.floor(Math.random() * profilePresets.length)];
+    return {
+      ...createProfileFromPreset(preset),
+      name: launchOverrides.name || preset.name,
+      role: launchOverrides.role || preset.role,
+      color: launchOverrides.color || preset.color,
+    };
+  }
+
+  const preset = profilePresets[Math.floor(Math.random() * profilePresets.length)];
+  const stored = readStoredProfile();
+  const loadedProfile = stored ? createProfileFromStored(stored, preset) : createProfileFromPreset(preset);
+  saveProfile(loadedProfile);
+  return loadedProfile;
+}
+
+function saveProfile(nextProfile = profile) {
+  const storedProfile = {
+    name: nextProfile.name,
+    role: nextProfile.role,
+    color: nextProfile.color,
+    baseSpeed: nextProfile.baseSpeed,
+    variance: nextProfile.variance,
+  };
+  const targetStore = storageAvailable ? window.localStorage : sessionStore;
+  targetStore.setItem(PROFILE_KEY, JSON.stringify(storedProfile));
 }
 
 function roomStorageKey(roomId) {
@@ -600,6 +631,11 @@ function renderPanelState() {
   railButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.panelTarget === activeRailTarget);
   });
+  heroTabButtons.forEach((button) => {
+    const isActive = button.dataset.panelTarget === activeHeroTarget;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
 }
 
 function setPanelCollapsed(nextValue) {
@@ -610,8 +646,16 @@ function setPanelCollapsed(nextValue) {
 
 function setActiveRailTarget(target) {
   activeRailTarget = target;
+  if (heroTabButtons.some((button) => button.dataset.panelTarget === target)) {
+    activeHeroTarget = target;
+  }
   railButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.panelTarget === target);
+  });
+  heroTabButtons.forEach((button) => {
+    const isActive = button.dataset.panelTarget === activeHeroTarget;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
   });
 }
 
@@ -620,7 +664,7 @@ function revealPanelFromRail(target) {
   setPanelCollapsed(false);
   const panel = document.querySelector(`.${target}`);
   if (panel) {
-    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    panel.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 }
 
@@ -924,7 +968,7 @@ async function createRemoteRoom() {
   const payload = {
     title: roomDefaults.title,
     hostId: profile.id,
-    demoEnabled: demoToggle.checked,
+    demoEnabled: DEMO_PARTICIPANTS_ENABLED,
   };
   const result = await requestJson(`${API_BASE}/rooms`, {
     method: "POST",
@@ -942,7 +986,7 @@ async function upsertRemoteParticipant(roomId, participant, options = {}) {
   const result = await requestJson(`${API_BASE}/rooms/${roomId}/participants`, {
     method: "POST",
     body: JSON.stringify({
-      demoEnabled: demoToggle.checked,
+      demoEnabled: DEMO_PARTICIPANTS_ENABLED,
       participant: {
         ...participant,
         isHost: options.isHost || false,
@@ -1105,7 +1149,7 @@ function createLocalRoom() {
     id: roomId,
     title: roomDefaults.title,
     hostId: profile.id,
-    demoEnabled: demoToggle.checked,
+    demoEnabled: DEMO_PARTICIPANTS_ENABLED,
     createdAt: Date.now(),
     participants: {},
   };
@@ -1410,6 +1454,7 @@ function renderRoom(room) {
     : `房间 ${room.id} 正在共享位置，${participants.length} 位骑友沿同一路线同步`;
   roomHelper.textContent = `当前房间 ${room.id} 已连接。点击微信分享，把邀请码发给同行骑友即可加入。`;
 
+  renderRoomActionState();
   updateInsights(participants, selfParticipant);
 }
 
@@ -1439,6 +1484,7 @@ function renderDisconnectedState(copy = "你已退出共享房间。可以重新
   roomModeBadge.textContent = "未共享";
   statusRibbonCopy.textContent = "当前未在共享房间中，创建或加入房间后会每 2 秒同步一次位置";
   roomHelper.textContent = copy;
+  renderRoomActionState();
 }
 
 function updateBots(room) {
@@ -1461,7 +1507,7 @@ async function pushSelfUpdate(forceRender = false) {
   if (!room) return;
 
   frameCount += 1;
-  room.demoEnabled = demoToggle.checked;
+  room.demoEnabled = DEMO_PARTICIPANTS_ENABLED;
   adoptHostIfNeeded(room);
   ensureSelfParticipant(room);
   ensureDemoParticipants(room);
@@ -1503,7 +1549,7 @@ async function joinLocalRoom(roomId) {
     return;
   }
 
-  room.demoEnabled = demoToggle.checked;
+  room.demoEnabled = DEMO_PARTICIPANTS_ENABLED;
   adoptHostIfNeeded(room);
   ensureSelfParticipant(room);
   ensureDemoParticipants(room);
@@ -1641,7 +1687,6 @@ function buildGuestInviteUrl(roomId) {
   params.set("member", `guest-${roomId.toLowerCase()}`);
   params.set("name", "骑行伙伴");
   params.set("role", "跟骑");
-  params.set("demo", demoToggle.checked ? "1" : "0");
   params.delete("lat");
   params.delete("lng");
   params.delete("lon");
@@ -1702,6 +1747,12 @@ function bindEvents() {
     });
   });
 
+  heroTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      revealPanelFromRail(button.dataset.panelTarget);
+    });
+  });
+
   toggleMotionButton.addEventListener("click", () => {
     isRunning = !isRunning;
     toggleMotionButton.textContent = isRunning ? "暂停模拟" : "继续模拟";
@@ -1717,11 +1768,6 @@ function bindEvents() {
   riderRoleSelect.addEventListener("change", () => {
     profile.role = riderRoleSelect.value;
     saveProfile();
-    void pushSelfUpdate(true);
-  });
-
-  demoToggle.addEventListener("change", () => {
-    if (!ensureBootReady()) return;
     void pushSelfUpdate(true);
   });
 
@@ -1818,9 +1864,6 @@ function bootstrap() {
       try {
         await fetchRemoteRoom(roomId || "PING").catch(() => null);
         syncMode = "remote";
-        if (launchOverrides.demo === "0") {
-          demoToggle.checked = false;
-        }
         if (roomId) {
           await joinRemoteRoom(roomId);
         } else {
@@ -1848,7 +1891,7 @@ function bootstrap() {
         if (roomId) {
           const room = readRoom(roomId);
           if (room) {
-            room.demoEnabled = room.demoEnabled ?? true;
+            room.demoEnabled = DEMO_PARTICIPANTS_ENABLED;
             adoptHostIfNeeded(room);
             ensureSelfParticipant(room);
             ensureDemoParticipants(room);
@@ -1856,7 +1899,6 @@ function bootstrap() {
             currentRoomId = room.id;
             currentRoom = room;
             roomCodeInput.value = room.id;
-            demoToggle.checked = room.demoEnabled ?? true;
             setRoomLocation(room.id);
             renderRoom(room);
           } else {
